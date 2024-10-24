@@ -11,9 +11,13 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/cloudflare/cloudflared/logger"
+	"github.com/cloudflare/cloudflared/token"
 )
 
 const (
@@ -175,9 +179,40 @@ func NewClient(c Config, opts ...ClientFunc) *Client {
 		transport.TLSClientConfig.Renegotiation = tls.RenegotiateFreelyAsClient
 	}
 
-	client.transport = transport
+	if c.AuthType != nil && *c.AuthType == AuthTypeCFAccess {
+		tempAccessURL, _ := url.Parse(c.Server)
+		cloudflaredLogger := logger.Create(nil)
+		appInfo, err := token.GetAppInfo(tempAccessURL)
+		if err != nil {
+			cloudflaredLogger.Fatal().Err(err).Msg("failed to fetch access token")
+		}
+		tok, err := token.FetchToken(tempAccessURL, appInfo, cloudflaredLogger)
+		if err != nil {
+			cloudflaredLogger.Fatal().Err(err).Msg("failed to fetch access token")
+		}
+		client.transport = NewCFAccessRoundTripper(tok, transport)
+	} else {
+		client.transport = transport
+	}
 
 	return &client
+}
+
+type cfAccessRoundTripper struct {
+	token string
+	rt    http.RoundTripper
+}
+
+// NewCFAccessRoundTripper creates a round tripper that fetches and adds Cf-Access-Tokens to all requests.
+func NewCFAccessRoundTripper(tok string, rt http.RoundTripper) *cfAccessRoundTripper {
+	return &cfAccessRoundTripper{tok, rt}
+}
+
+func (rt *cfAccessRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if len(req.Header.Get("Cf-Access-Token")) == 0 {
+		req.Header.Set("Cf-Access-Token", rt.token)
+	}
+	return rt.rt.RoundTrip(req)
 }
 
 // WithTimeout is a functional opt to attach timeout to the client.
