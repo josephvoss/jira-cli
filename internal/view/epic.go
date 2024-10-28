@@ -43,7 +43,7 @@ func (el *EpicList) Render() error {
 				dataFn := func() any {
 					data := d.(tui.TableData)
 					ci := data.GetIndex(fieldKey)
-					iss, _ := api.ProxyGetIssue(api.DefaultClient(false), data.Get(r, ci), false, issue.NewNumCommentsFilter(1))
+					iss, _ := api.ProxyGetIssue(api.DefaultClient(false), data.Get(r, ci), issue.NewNumCommentsFilter(1))
 					return iss
 				}
 				renderFn := func(i any) (string, error) {

@@ -98,14 +98,8 @@ func (i Issue) String() string {
 	if desc != "" {
 		s.WriteString(fmt.Sprintf("\n\n%s\n\n%s", i.separator("Description"), desc))
 	}
-	if len(i.Data.Fields.CustomFields) > 0 {
-		s.WriteString(
-			fmt.Sprintf(
-				"\n\n%s\n\n%s\n",
-				i.separator(fmt.Sprintf("%d Custom fields", len(i.Data.Fields.CustomFields))),
-				i.customFields(),
-			),
-		)
+	if len(i.Options.CustomFields) > 0 {
+		s.WriteString(fmt.Sprintf("\n\n%s\n\n%s", i.separator("Additional fields"), i.customFields()))
 	}
 	if len(i.Data.Fields.Subtasks) > 0 {
 		s.WriteString(
@@ -148,11 +142,11 @@ func (i Issue) fragments() []fragment {
 		)
 	}
 
-	if len(i.Data.Fields.CustomFields) > 0 {
+	if len(i.Options.CustomFields) > 0 {
 		scraps = append(
 			scraps,
 			newBlankFragment(1),
-			fragment{Body: i.separator(fmt.Sprintf("%d CustomFields", len(i.Data.Fields.CustomFields)))},
+			fragment{Body: i.separator("Additional fields")},
 			newBlankFragment(2),
 			fragment{Body: i.customFields()},
 			newBlankFragment(1),
@@ -314,18 +308,18 @@ func (i Issue) subtasks() string {
 }
 
 func (i Issue) customFields() string {
-	if len(i.Data.Fields.CustomFields) == 0 {
+	if len(i.Options.CustomFields) == 0 {
 		return ""
 	}
 
 	var (
-		custfields strings.Builder
-		summaryLen = defaultSummaryLength
+		custfields    strings.Builder
+		summaryLen    = defaultSummaryLength
 		maxSummaryLen int
-		maxKeyLen  int
+		maxKeyLen     int
 	)
 
-	// build mapping from name to value
+	// Select fields to display from input issue options
 	fieldsToPrint := make(map[string]string)
 	for _, itf := range i.Options.CustomFields {
 		for idx, value := range i.Data.Fields.CustomFields {
@@ -334,7 +328,6 @@ func (i Issue) customFields() string {
 				break
 			}
 		}
-		// TODO here and no field set, error fmt.Printf("no custom field defined for %s\n", idx)
 	}
 
 	// set max lengths
@@ -347,17 +340,13 @@ func (i Issue) customFields() string {
 		summaryLen = maxSummaryLen
 	}
 
-	// TODO wrap
 	// TODO fix line breaks
 
-	custfields.WriteString(
-		fmt.Sprintf("\n %s\n\n", coloredOut("CUSTOMFIELDS", color.FgWhite, color.Bold)),
-	)
 	// print values
 	for idx, field := range fieldsToPrint {
 		custfields.WriteString(
 			fmt.Sprintf(
-				"  %s • %s\n\n",
+				"  %s\n        %s\n\n",
 				coloredOut(pad(idx, maxKeyLen), color.FgGreen, color.Bold),
 				pad(field, summaryLen),
 			),
