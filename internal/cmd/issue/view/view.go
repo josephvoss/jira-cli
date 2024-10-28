@@ -28,7 +28,7 @@ $ jira issue view ISSUE-1 --raw`
 	flagDebug    = "debug"
 	flagComments = "comments"
 	flagPlain    = "plain"
-	flagCustomFields = "customFields"
+	flagCustomFields = "custom-fields"
 
 	configProject = "project.key"
 	configServer  = "server"
@@ -97,7 +97,6 @@ func viewPretty(cmd *cobra.Command, args []string) {
 
 	customFields, err := cmd.Flags().GetStringSlice(flagCustomFields)
 	cmdutil.ExitIfError(err)
-	fetchCustomFields := len(customFields) > 0
 
 	key := cmdutil.GetJiraIssueKey(viper.GetString(configProject), args[0])
 	iss, err := func() (*jira.Issue, error) {
@@ -105,7 +104,7 @@ func viewPretty(cmd *cobra.Command, args []string) {
 		defer s.Stop()
 
 		client := api.DefaultClient(debug)
-		return api.ProxyGetIssue(client, key, fetchCustomFields, issue.NewNumCommentsFilter(comments))
+		return api.ProxyGetIssue(client, key, issue.NewNumCommentsFilter(comments))
 	}()
 	cmdutil.ExitIfError(err)
 
@@ -118,11 +117,11 @@ func viewPretty(cmd *cobra.Command, args []string) {
 		Display: tuiView.DisplayFormat{Plain: plain},
 		Options: tuiView.IssueOption{NumComments: comments},
 	}
-	// load custom fields?
-	// set custom fields to array of ids to include
-	if configuredCustomFields, err := cmdcommon.GetConfiguredCustomFields(); err == nil && fetchCustomFields {
-		// filter custom fields by key
-		fieldsToSearch := make([]jira.IssueTypeField,0)
+
+	// Only add specified custom fields as options to tuiView
+	if configuredCustomFields, err := cmdcommon.GetConfiguredCustomFields();
+		err == nil && len(customFields) > 0 {
+		var fieldsToSearch []jira.IssueTypeField
 		for _, id := range customFields {
 			for _, mappedField := range configuredCustomFields {
 				if mappedField.Key == fmt.Sprintf("customfield_%s", id) {

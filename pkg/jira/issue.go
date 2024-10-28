@@ -27,8 +27,8 @@ const (
 )
 
 // GetIssue fetches issue details using GET /issue/{key} endpoint.
-func (c *Client) GetIssue(key string, customFields bool, opts ...filter.Filter) (*Issue, error) {
-	iss, err := c.getIssue(key, customFields, apiVersion3)
+func (c *Client) GetIssue(key string, opts ...filter.Filter) (*Issue, error) {
+	iss, err := c.getIssue(key, apiVersion3)
 	if err != nil {
 		return nil, err
 	}
@@ -48,32 +48,25 @@ func (c *Client) GetIssue(key string, customFields bool, opts ...filter.Filter) 
 }
 
 // GetIssueV2 fetches issue details using v2 version of Jira GET /issue/{key} endpoint.
-func (c *Client) GetIssueV2(key string, customFields bool,_ ...filter.Filter) (*Issue, error) {
-	return c.getIssue(key, customFields, apiVersion2)
+func (c *Client) GetIssueV2(key string, _ ...filter.Filter) (*Issue, error) {
+	return c.getIssue(key, apiVersion2)
 }
 
-// TODO reorder these args, cf at back
-func (c *Client) getIssue(key string, customFields bool, ver string) (*Issue, error) {
+func (c *Client) getIssue(key string, ver string) (*Issue, error) {
 	rawOut, err := c.getIssueRaw(key, ver)
 	if err != nil {
 		return nil, err
 	}
 
 	var iss Issue
-	// TODO custom unmarshaler
-	// would be better, but we really just need to pop issue custom fields.
 	err = json.Unmarshal([]byte(rawOut), &iss)
 	if err != nil {
 		return nil, err
 	}
 
-	if customFields {
-		// Get customfields map custom_id:str
-		err = populateCustomFields([]byte(rawOut), &iss)
-		if err != nil {
-			return nil, err
-		}
-		//fmt.Printf("len custom fields %d\n", iss.Fields.CustomFields)
+	err = populateCustomFields([]byte(rawOut), &iss)
+	if err != nil {
+		return nil, err
 	}
 
 	return &iss, nil
@@ -292,7 +285,7 @@ func (c *Client) UnlinkIssue(linkID string) error {
 
 // GetLinkID gets linkID between two issues.
 func (c *Client) GetLinkID(inwardIssue, outwardIssue string) (string, error) {
-	i, err := c.GetIssueV2(inwardIssue, false)
+	i, err := c.GetIssueV2(inwardIssue)
 	if err != nil {
 		return "", err
 	}
