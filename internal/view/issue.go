@@ -42,7 +42,8 @@ type issueComment struct {
 
 // IssueOption is filtering options for an issue.
 type IssueOption struct {
-	NumComments uint
+	CustomFields []jira.IssueTypeField
+	NumComments  uint
 }
 
 // Issue is a list view for issues.
@@ -97,6 +98,15 @@ func (i Issue) String() string {
 	if desc != "" {
 		s.WriteString(fmt.Sprintf("\n\n%s\n\n%s", i.separator("Description"), desc))
 	}
+	if len(i.Data.Fields.CustomFields) > 0 {
+		s.WriteString(
+			fmt.Sprintf(
+				"\n\n%s\n\n%s\n",
+				i.separator(fmt.Sprintf("%d Custom fields", len(i.Data.Fields.CustomFields))),
+				i.customFields(),
+			),
+		)
+	}
 	if len(i.Data.Fields.Subtasks) > 0 {
 		s.WriteString(
 			fmt.Sprintf(
@@ -138,13 +148,13 @@ func (i Issue) fragments() []fragment {
 		)
 	}
 
-	if len(i.Data.Fields.Subtasks) > 0 {
+	if len(i.Data.Fields.CustomFields) > 0 {
 		scraps = append(
 			scraps,
 			newBlankFragment(1),
-			fragment{Body: i.separator(fmt.Sprintf("%d Subtasks", len(i.Data.Fields.Subtasks)))},
+			fragment{Body: i.separator(fmt.Sprintf("%d CustomFields", len(i.Data.Fields.CustomFields)))},
 			newBlankFragment(2),
-			fragment{Body: i.subtasks()},
+			fragment{Body: i.customFields()},
 			newBlankFragment(1),
 		)
 	}
@@ -301,6 +311,60 @@ func (i Issue) subtasks() string {
 	}
 
 	return subtasks.String()
+}
+
+func (i Issue) customFields() string {
+	if len(i.Data.Fields.CustomFields) == 0 {
+		return ""
+	}
+
+	var (
+		custfields strings.Builder
+		summaryLen = defaultSummaryLength
+		maxSummaryLen int
+		maxKeyLen  int
+	)
+
+	// build mapping from name to value
+	fieldsToPrint := make(map[string]string)
+	for _, itf := range i.Options.CustomFields {
+		for idx, value := range i.Data.Fields.CustomFields {
+			if idx == itf.Key {
+				fieldsToPrint[itf.Name] = value
+				break
+			}
+		}
+		// TODO here and no field set, error fmt.Printf("no custom field defined for %s\n", idx)
+	}
+
+	// set max lengths
+	for idx, field := range fieldsToPrint {
+		maxKeyLen = max(len(idx), maxKeyLen)
+		maxSummaryLen = max(len(field), maxSummaryLen)
+	}
+
+	if maxSummaryLen < summaryLen {
+		summaryLen = maxSummaryLen
+	}
+
+	// TODO wrap
+	// TODO fix line breaks
+
+	custfields.WriteString(
+		fmt.Sprintf("\n %s\n\n", coloredOut("CUSTOMFIELDS", color.FgWhite, color.Bold)),
+	)
+	// print values
+	for idx, field := range fieldsToPrint {
+		custfields.WriteString(
+			fmt.Sprintf(
+				"  %s • %s\n\n",
+				coloredOut(pad(idx, maxKeyLen), color.FgGreen, color.Bold),
+				pad(field, summaryLen),
+			),
+		)
+	}
+
+	return custfields.String()
 }
 
 func (i Issue) linkedIssues() string {

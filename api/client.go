@@ -107,7 +107,7 @@ func ProxyGetIssueRaw(c *jira.Client, key string) (string, error) {
 // ProxyGetIssue uses either a v2 or v3 version of the Jira GET /issue/{key}
 // endpoint to fetch the issue details based on configured installation type.
 // Defaults to v3 if installation type is not defined in the config.
-func ProxyGetIssue(c *jira.Client, key string, opts ...filter.Filter) (*jira.Issue, error) {
+func ProxyGetIssue(c *jira.Client, key string, customFields bool, opts ...filter.Filter) (*jira.Issue, error) {
 	var (
 		iss *jira.Issue
 		err error
@@ -116,9 +116,9 @@ func ProxyGetIssue(c *jira.Client, key string, opts ...filter.Filter) (*jira.Iss
 	it := viper.GetString("installation")
 
 	if it == jira.InstallationTypeLocal {
-		iss, err = c.GetIssueV2(key, opts...)
+		iss, err = c.GetIssueV2(key, customFields, opts...)
 	} else {
-		iss, err = c.GetIssue(key, opts...)
+		iss, err = c.GetIssue(key, customFields, opts...)
 	}
 
 	return iss, err
