@@ -8,6 +8,7 @@ import (
 
 	"github.com/ankitpokhrel/jira-cli/api"
 	"github.com/ankitpokhrel/jira-cli/internal/cmdutil"
+	"github.com/ankitpokhrel/jira-cli/internal/cmdcommon"
 	tuiView "github.com/ankitpokhrel/jira-cli/internal/view"
 	"github.com/ankitpokhrel/jira-cli/pkg/jira"
 	"github.com/ankitpokhrel/jira-cli/pkg/jira/filter/issue"
@@ -27,6 +28,7 @@ $ jira issue view ISSUE-1 --raw`
 	flagDebug    = "debug"
 	flagComments = "comments"
 	flagPlain    = "plain"
+	flagCustomFields = "customFields"
 
 	configProject = "project.key"
 	configServer  = "server"
@@ -52,6 +54,7 @@ func NewCmdView() *cobra.Command {
 	cmd.Flags().Uint(flagComments, 1, "Show N comments")
 	cmd.Flags().Bool(flagPlain, false, "Display output in plain mode")
 	cmd.Flags().Bool(flagRaw, false, "Print raw Jira API response")
+	cmd.Flags().StringSlice(flagCustomFields, []string{}, "Custom field IDs to include in output")
 
 	return &cmd
 }
@@ -92,13 +95,17 @@ func viewPretty(cmd *cobra.Command, args []string) {
 	comments, err := cmd.Flags().GetUint(flagComments)
 	cmdutil.ExitIfError(err)
 
+	customFields, err := cmd.Flags().GetStringSlice(flagCustomFields)
+	cmdutil.ExitIfError(err)
+	fetchCustomFields := len(customFields) > 0
+
 	key := cmdutil.GetJiraIssueKey(viper.GetString(configProject), args[0])
 	iss, err := func() (*jira.Issue, error) {
 		s := cmdutil.Info(messageFetchingData)
 		defer s.Stop()
 
 		client := api.DefaultClient(debug)
-		return api.ProxyGetIssue(client, key, issue.NewNumCommentsFilter(comments))
+		return api.ProxyGetIssue(client, key, fetchCustomFields, issue.NewNumCommentsFilter(comments))
 	}()
 	cmdutil.ExitIfError(err)
 
@@ -110,6 +117,20 @@ func viewPretty(cmd *cobra.Command, args []string) {
 		Data:    iss,
 		Display: tuiView.DisplayFormat{Plain: plain},
 		Options: tuiView.IssueOption{NumComments: comments},
+	}
+	// load custom fields?
+	// set custom fields to array of ids to include
+	if configuredCustomFields, err := cmdcommon.GetConfiguredCustomFields(); err == nil && fetchCustomFields {
+		// filter custom fields by key
+		fieldsToSearch := make([]jira.IssueTypeField,0)
+		for _, id := range customFields {
+			for _, mappedField := range configuredCustomFields {
+				if mappedField.Key == fmt.Sprintf("customfield_%s", id) {
+					fieldsToSearch = append(fieldsToSearch, mappedField)
+				}
+			}
+		}
+		v.Options = tuiView.IssueOption{NumComments: comments, CustomFields: fieldsToSearch}
 	}
 	cmdutil.ExitIfError(v.Render())
 }

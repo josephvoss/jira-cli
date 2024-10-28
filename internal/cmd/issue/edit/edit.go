@@ -70,7 +70,7 @@ func edit(cmd *cobra.Command, args []string) {
 		s := cmdutil.Info(fmt.Sprintf("Fetching issue %s...", params.issueKey))
 		defer s.Stop()
 
-		issue, err := api.ProxyGetIssue(client, params.issueKey)
+		issue, err := api.ProxyGetIssue(client,params.issueKey, false)
 		if err != nil {
 			return nil, err
 		}

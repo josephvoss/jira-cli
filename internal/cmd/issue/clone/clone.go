@@ -62,7 +62,7 @@ func clone(cmd *cobra.Command, args []string) {
 		s := cmdutil.Info("Fetching issue details...")
 		defer s.Stop()
 
-		issue, err := api.ProxyGetIssue(client, key)
+		issue, err := api.ProxyGetIssue(client, key, false)
 		if err != nil {
 			return nil, err
 		}
