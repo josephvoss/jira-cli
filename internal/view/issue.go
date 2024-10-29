@@ -153,6 +153,17 @@ func (i Issue) fragments() []fragment {
 		)
 	}
 
+	if len(i.Data.Fields.Subtasks) > 0 {
+		scraps = append(
+			scraps,
+			newBlankFragment(1),
+			fragment{Body: i.separator(fmt.Sprintf("%d Subtasks", len(i.Data.Fields.Subtasks)))},
+			newBlankFragment(2),
+			fragment{Body: i.subtasks()},
+			newBlankFragment(1),
+		)
+	}
+
 	if len(i.Data.Fields.IssueLinks) > 0 {
 		scraps = append(
 			scraps,
