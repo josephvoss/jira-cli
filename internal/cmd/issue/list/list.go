@@ -10,6 +10,7 @@ import (
 
 	"github.com/ankitpokhrel/jira-cli/api"
 	"github.com/ankitpokhrel/jira-cli/internal/cmdutil"
+	"github.com/ankitpokhrel/jira-cli/internal/cmdcommon"
 	"github.com/ankitpokhrel/jira-cli/internal/query"
 	"github.com/ankitpokhrel/jira-cli/internal/view"
 	"github.com/ankitpokhrel/jira-cli/pkg/jira"
@@ -170,6 +171,23 @@ func loadList(cmd *cobra.Command, args []string) {
 		comments = max(numComments, 1)
 	}
 
+	customFields, err := cmd.Flags().GetStringSlice("custom-fields")
+	cmdutil.ExitIfError(err)
+
+	// Only add specified custom fields as options to tuiView
+	// TODO refactor w/ view.go
+	var fieldsToSearch []jira.IssueTypeField
+	if configuredCustomFields, err := cmdcommon.GetConfiguredCustomFields();
+		err == nil && len(customFields) > 0 {
+		for _, id := range customFields {
+			for _, mappedField := range configuredCustomFields {
+				if mappedField.Key == fmt.Sprintf("customfield_%s", id) {
+					fieldsToSearch = append(fieldsToSearch, mappedField)
+				}
+			}
+		}
+	}
+
 	v := view.IssueList{
 		Project: project,
 		Server:  server,
@@ -193,6 +211,10 @@ func loadList(cmd *cobra.Command, args []string) {
 			}(),
 			TableStyle: cmdutil.GetTUIStyleConfig(),
 			Timezone:   viper.GetString("timezone"),
+		},
+		ViewOptions: view.IssueOption{
+			NumComments: comments,
+			CustomFields: fieldsToSearch,
 		},
 	}
 
@@ -246,6 +268,9 @@ func SetFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint("comments", 1, "Show N comments when viewing the issue")
 	cmd.Flags().Bool("raw", false, "Print raw JSON output")
 	cmd.Flags().Bool("csv", false, "Print output in CSV format")
+
+	// View options to set
+	cmd.Flags().StringSlice("custom-fields", []string{}, "Custom field IDs to include in output")
 
 	if cmd.HasParent() && cmd.Parent().Name() != "sprint" {
 		cmd.Flags().String("columns", "", "Comma separated list of columns to display in the plain mode.\n"+

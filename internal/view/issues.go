@@ -35,6 +35,7 @@ type IssueList struct {
 	Display    DisplayFormat
 	Refresh    tui.RefreshFunc
 	FooterText string
+	ViewOptions IssueOption
 }
 
 // Render renders the view.
@@ -80,7 +81,7 @@ func (l *IssueList) Render() error {
 				iss := Issue{
 					Server:  l.Server,
 					Data:    i.(*jira.Issue),
-					Options: IssueOption{NumComments: l.Display.Comments},
+					Options: l.ViewOptions,
 				}
 				return iss.RenderedOut(renderer)
 			}
