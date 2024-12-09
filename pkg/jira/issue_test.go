@@ -76,6 +76,7 @@ func TestGetIssue(t *testing.T) {
 			}{Name: "To Do"},
 			Created: "2020-12-03T14:05:20.974+0100",
 			Updated: "2020-12-03T14:05:20.974+0100",
+      CustomFields: map[string]string{},
 			IssueLinks: []struct {
 				ID       string `json:"id"`
 				LinkType struct {
@@ -144,6 +145,7 @@ func TestGetIssueWithoutDescription(t *testing.T) {
 			Status: struct {
 				Name string `json:"name"`
 			}{Name: "To Do"},
+      CustomFields: map[string]string{},
 			Created: "2020-12-03T14:05:20.974+0100",
 			Updated: "2020-12-03T14:05:20.974+0100",
 		},
@@ -195,6 +197,7 @@ func TestGetIssueV2(t *testing.T) {
 			Status: struct {
 				Name string `json:"name"`
 			}{Name: "To Do"},
+      CustomFields: map[string]string{},
 			Created: "2020-12-03T14:05:20.974+0100",
 			Updated: "2020-12-03T14:05:20.974+0100",
 		},
